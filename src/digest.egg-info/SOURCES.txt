@@ -1,0 +1,12 @@
+pyproject.toml
+src/digest/__init__.py
+src/digest/agent.py
+src/digest/config.py
+src/digest/gmail_client.py
+src/digest/notion_client.py
+src/digest/state.py
+src/digest.egg-info/PKG-INFO
+src/digest.egg-info/SOURCES.txt
+src/digest.egg-info/dependency_links.txt
+src/digest.egg-info/top_level.txt
+tests/test_gmail.py

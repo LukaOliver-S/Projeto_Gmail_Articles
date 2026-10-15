@@ -1,0 +1,9 @@
+.env
+/__pycache__/
+/.venv
+/.vscode/
+data/processed.json
+/credentials
+token.json
+config.yaml
+*.pyc

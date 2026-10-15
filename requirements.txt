@@ -1,0 +1,18 @@
+# Gmail API
+google-api-python-client
+google-auth-oauthlib
+google-auth-httplib2
+
+# Email HTML parsing
+beautifulsoup4
+lxml
+
+# LLM (generation / extraction)
+google-genai
+openai            # for the Ollama-compatible local fallback, if you use it
+
+# Notion
+notion-client
+
+# Config
+python-dotenv
