@@ -1,9 +1,10 @@
 from digest.state import State
-from digest.gmail_client import fetch_emails, get_service
 from digest.notion_client import NotionClient
 from digest.processing import Processing
 from digest.agent import extract_stories
 from digest.config import Config   # adjust import path
+from digest.email_clients import EmailClientFactory
+
 
 import os
 import json
@@ -12,14 +13,13 @@ load_dotenv()
 
 cfg = Config("config.yaml").parse_config()
 
-query = "from:(" + " OR ".join(cfg.gmail_query_list) + ")"
 
 state = State("data/processed.json")
 notion = NotionClient(token=cfg.notion_api_token, data_source_id=cfg.notion_database_id)
-
+email_client = EmailClientFactory.get_email_client(cfg)
 for sender in cfg.gmail_query_list:
     print(f"Processing emails from: {sender}")
-    emails = fetch_emails(get_service(), query, 10)
+    emails = email_client.fetch_emails(sender, 10)
     for email in emails:
         if state.is_processed(email["Id"]):
             print(f"skip: {email['Subject'][:40]}")

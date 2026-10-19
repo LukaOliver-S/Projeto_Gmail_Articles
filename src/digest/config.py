@@ -41,8 +41,12 @@ class Application:
     local_fallback: list[str] = field(default_factory=list)   # e.g. ["llama3.1", "qwen2.5"]
 
 
+    #___SCHEDULER____
+    scheduler_time: str = "01:00"  # Default time for the scheduler
 
-
+    #____EMAIL CLIENT____
+    email_client: str = "imap"  # Options: "imap" or "oauth
+    email_address: str = ""
     @property
     def google_api_client_id(self) -> str:
         return os.environ.get("GOOGLE_CLIENT_ID", "")
@@ -54,6 +58,12 @@ class Application:
     @property
     def notion_api_token(self) -> str:
         return os.environ.get("NOTION_TOKEN", "")
+    @property
+    def gmail_address(self) -> str:
+        return os.environ.get("GMAIL_ADDRESS", "")
+    @property
+    def gmail_imap_secret(self) -> str:
+        return os.environ.get("GMAIL_IMAP_SECRET", "")
 
 
 class Config:
