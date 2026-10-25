@@ -1,61 +1,62 @@
 import os
 from dotenv import load_dotenv
 from digest.config import Config
-from digest.email_clients.imap_client import ImapClient
-from digest.processing import Processing        # adjust to your actual module/class
-from digest.agent import extract_stories
+from digest.notion.rendering import NotionRenderer
 load_dotenv()
 cfg = Config("config.yaml").parse_config()
 
-email_address = cfg.email_address                    # from config.yaml
-app_password = os.getenv("GMAIL_IMAP_SECRET")         # from .env (secret)
+nc = NotionRenderer(
+    token=cfg.notion_api_token,
+    issues_ds=cfg.notion_issues_ds,
+    news_ds=cfg.notion_news_ds,
+    tech_ds=cfg.notion_tech_ds,
+)
 
-if not email_address or not app_password:
-    raise RuntimeError("Missing email_address (config) or GMAIL_IMAP_SECRET (.env)")
+# fake data mimicking what the pipeline produces
+fake_email = {
+    "Id": "test-email-001",
+    "Subject": "Test Newsletter: Issue 1",
+    "Sender": "test@newsletter.com",
+    "Date": "Tue, 20 Oct 2026 19:00:00 -0300",
+    "Link": "https://example.com/email/1",
+}
+fake_summary = "A test newsletter covering RAG and agents."
+fake_story = {
+    "title": "A New RAG Technique",
+    "focus": "Research",
+    "innovation": "This story introduces a novel retrieval method combining dense and sparse search.",
+    "technologies": ["RAG", "Vision-Language Models"],
+}
 
-client = ImapClient(email_address=email_address, app_password=app_password)
-emails = client.fetch_emails("thebatch@deeplearning.ai", 1)
-print("Fetched:", len(emails))
-# ---- STAGE 1: fetch ----
-emails = client.fetch_emails("thebatch@deeplearning.ai", 1)
 print("=" * 50)
-print("STAGE 1 — FETCH")
-print("Fetched:", len(emails))
-if not emails:
-    print("❌ No emails fetched — IMAP query returns nothing. Check search syntax.")
-    raise SystemExit
 
-email = emails[0]
-print("Keys:", list(email.keys()))
-print("Subject:", email.get("Subject"))
-print("Sender:", email.get("Sender"))
-print("Date:", email.get("Date"), "| type:", type(email.get("Date")).__name__)
-body = email.get("Body") or ""
-print("Body length:", len(body))
-print("Full content?", len(body) > 5000)
+# 1. Create the issue
+print("1. Creating issue...")
+issue_id = nc.create_issue(fake_email, fake_summary)
+print("   issue_id:", issue_id)
 
-# ---- STAGE 2: clean ----
+# 2. Resolve technologies (entity resolution)
+print("2. Resolving technologies...")
+tech_ids = [nc.find_or_create_tech(t) for t in fake_story["technologies"]]
+print("   tech_ids:", tech_ids)
+
+# 3. Create the news story, linked to issue + techs
+print("3. Creating news story...")
+news_id = nc.create_news(fake_story, issue_id, tech_ids)
+print("   news_id:", news_id)
+
 print("=" * 50)
-print("STAGE 2 — CLEAN")
-clean_text, _ = Processing.clean_email(email["Body"])   # adjust call to yours
-print("Clean text length:", len(clean_text))
-print("Contains 'GPT' or a model name?", "GPT" in clean_text or "Gemini" in clean_text)
+print("✅ All created. Now check Notion:")
+print("  - Issues DB: one 'Test Newsletter: Issue 1' row")
+print("  - News DB: one 'A New RAG Technique' row, linked to that issue + 2 techs")
+print("  - Technologies DB: 'RAG' and 'Vision-Language Models' pages")
+print("  - Open the issue → it should show the story under it (relation works)")
+print("  - Open a tech → it should show the story (relation works)")
 
-# ---- STAGE 3: extract ----
-print("=" * 50)
-print("STAGE 3 — EXTRACT")
-result = extract_stories(clean_text)
-print("overall_summary present?", bool(result.get("overall_summary")))
-print("Number of stories:", len(result.get("stories", [])))
-for s in result.get("stories", []):
-    print(f"  - {s.get('title','?')[:45]} | {s.get('focus','?')} | tech={len(s.get('technologies',[]))}")
-
-# ---- STAGE 4: Notion (dry run — don't write, just show what WOULD be written) ----
-print("=" * 50)
-print("STAGE 4 — NOTION (dry run)")
-if not result.get("stories"):
-    print("❌ 0 stories → nothing would be written to Notion. Problem is upstream (stages 1-3).")
-else:
-    print(f"✅ Would write {len(result['stories'])} rows to Notion.")
-    print("   (If the real run writes nothing but this shows stories, the issue is")
-    print("    in add_story_row, the data_source_id, or state marking it already-done.)")
+# 4. Test idempotency of tech resolution — re-resolve, should reuse (no duplicates)
+print("\n4. Re-resolving 'RAG' (should return SAME id, not create duplicate)...")
+nc._tech_cache.clear()                              # force a real query, not cache
+rag_again = nc.find_or_create_tech("RAG")
+print("   RAG id (1st):", tech_ids[0])
+print("   RAG id (2nd):", rag_again)
+print("   SAME?", tech_ids[0] == rag_again, "← must be True (no duplicate)")

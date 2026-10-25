@@ -12,41 +12,33 @@ load_dotenv()
 class Application:
     """Configuration for the application."""
 
-    # # Google API configuration
-    # google_api_client_id: str
-    # google_api_client_secret: str
-    # google_api_redirect_uri: str
-
-    # Notion API configuration
-    # notion_api_token: str
-    notion_database_id: str
-
-    # Additional configuration options
-    gmail_query_list: list[str] 
+    # Required fields
+    gmail_query_list: list[str]
     categories: list[str]
-
-    #___GEMINI____
     gen_model: str
 
+    # Notion
+    notion_databases: list[dict] = field(default_factory=list)
 
-    #___GENERATOR BACKEND____
-
+    # Generation backend
     generator: str = "gemini"
     fallback_chain: list[str] = field(default_factory=list)
     max_output_tokens: int = 1024
 
-    # ____LOCAL____
+    # Local model
     local_base_url: str = "http://localhost:11434/v1"
     local_model: str = "llama3.1"
-    local_fallback: list[str] = field(default_factory=list)   # e.g. ["llama3.1", "qwen2.5"]
+    local_fallback: list[str] = field(default_factory=list)
 
+    # Scheduler
+    scheduler_time: str = "01:00"
 
-    #___SCHEDULER____
-    scheduler_time: str = "01:00"  # Default time for the scheduler
-
-    #____EMAIL CLIENT____
-    email_client: str = "imap"  # Options: "imap" or "oauth
+    # Email client
+    email_client: str = "imap"
     email_address: str = ""
+
+
+
     @property
     def google_api_client_id(self) -> str:
         return os.environ.get("GOOGLE_CLIENT_ID", "")
@@ -64,6 +56,15 @@ class Application:
     @property
     def gmail_imap_secret(self) -> str:
         return os.environ.get("GMAIL_IMAP_SECRET", "")
+    @property
+    def notion_issues_ds(self)-> str:
+        return next((db["data_source_id"] for db in self.notion_databases if db.get("name") == "issues"), "")
+    @property
+    def notion_news_ds(self)-> str:
+        return next((db["data_source_id"] for db in self.notion_databases if db.get("name") == "news"), "")
+    @property
+    def notion_tech_ds(self)-> str:
+        return next((db["data_source_id"] for db in self.notion_databases if db.get("name") == "technologies"), "")
 
 
 class Config:
