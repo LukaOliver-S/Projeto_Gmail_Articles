@@ -1,7 +1,7 @@
 from email.utils import parsedate_to_datetime
 import os
 from .client import NotionClient
-
+from .page_body import PageBodyBuilder
 class NewsNotion:
     def __init__(self, notion_client: NotionClient, news_ds: str = None):
         self.news_ds = news_ds
@@ -23,4 +23,9 @@ class NewsNotion:
             "Technologies": {"relation": [{"id": tid} for tid in tech_ids]},
             "Date": {"date": {"start": iso_date}} if iso_date else {"date": None},
         }
-        return self.notion_client.create_page(self.news_ds, properties)
+        body = (PageBodyBuilder()
+                .section("Summary", paragraph = story.get("innovation", ""))
+                .section("Pipeline", diagram_code = PageBodyBuilder.pipeline_to_mermaid(story.get("pipeline", [])))
+                .section("Key Points", bulleted_list = story.get("key_points", []))
+                .build())
+        return self.notion_client.create_page(self.news_ds, properties,children=body)
